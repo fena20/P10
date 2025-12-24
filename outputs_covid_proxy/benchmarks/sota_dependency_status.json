@@ -1,0 +1,9 @@
+{
+  "lightgbm": "4.6.0",
+  "xgboost": "3.0.3",
+  "catboost": "1.2.8",
+  "interpret": "0.7.4",
+  "torch": "2.6.0+cu124",
+  "torch_cuda_available": true,
+  "torch_cuda_device_count": 1
+}

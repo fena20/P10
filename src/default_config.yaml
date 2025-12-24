@@ -1,0 +1,298 @@
+# Heating Demand Modeling Framework Configuration
+# RECS 2020 Analysis
+
+# ============================================================================
+# DATA CONFIGURATION
+# ============================================================================
+data:
+  raw_path: "data/raw/recs2020_public_v7.csv"
+  processed_path: "data/processed/"
+  
+  # Primary target (annual space heating energy in kBTU)
+  target_column: "TOTALBTUSPH"
+  # Alternative targets
+  targets:
+    primary: "TOTALBTUSPH"
+    per_area: "E_heat_per_area"  # Computed: TOTALBTUSPH / TOTSQFT_EN
+  
+  # Final weight and replicate weights
+  weight_column: "NWEIGHT"
+  replicate_weights_prefix: "NWEIGHT"
+  n_replicate_weights: 60
+  
+  # Housing area
+  area_column: "TOTSQFT_EN"
+
+# ============================================================================
+# TECHNOLOGY GROUPING (Section 3)
+# ============================================================================
+technology_groups:
+  # EQUIPM codes for each group
+  combustion:
+    equipm_codes: [2, 3, 7, 8]  # Steam/radiator, furnace, room heater, wood stove
+    fuelheat_codes: [1, 2, 3, 7]  # Natural gas, propane, fuel oil, wood
+    description: "Combustion-based heating systems"
+  
+  electric_heat_pump:
+    equipm_codes: [4]  # Heat pump
+    fuelheat_codes: [5]  # Electricity
+    description: "Electric heat pump systems"
+  
+  electric_resistance:
+    equipm_codes: [5, 10]  # Built-in electric units, portable heaters
+    fuelheat_codes: [5]  # Electricity
+    description: "Electric resistance heating"
+  
+  hybrid_ambiguous:
+    # Cases with conflicting indicators or EQUIPM 13, 99
+    equipm_codes: [13, 99]
+    description: "Hybrid or ambiguous systems"
+  
+  excluded:
+    equipm_codes: [-2]  # No heating
+    description: "No heating system"
+
+# ============================================================================
+# FEATURES CONFIGURATION (Section 5 & 7)
+# ============================================================================
+features:
+  # Climate/weather features
+  climate:
+    - "HDD65"
+    - "CDD65"
+    - "HDD30YR_PUB"
+    - "DIVISION"
+    - "BA_climate"
+    - "IECC_climate_code"
+  
+  # Building characteristics
+  building:
+    - "TYPEHUQ"
+    - "YEARMADERANGE"
+    - "STORIES"
+    - "TOTSQFT_EN"
+    - "TOTHSQFT"
+    - "TOTCSQFT"
+    - "BEDROOMS"
+    - "TOTROOMS"
+    - "CELLR"
+    - "CRAWL"
+    - "CONCRETE"
+    - "ATTIC"
+    - "ATTICFIN"
+    - "WALLTYPE"
+    - "ROOFTYPE"
+    - "WINDOWS"
+    - "TYPEGLASS"
+    - "WINFRAME"
+    - "ADQINSUL"
+    - "DRAFTY"
+  
+  # Equipment characteristics
+  equipment:
+    - "EQUIPM"
+    - "FUELHEAT"
+    - "EQUIPAGE"
+    - "EQUIPAUX"
+    - "FUELAUX"
+    - "HEATCNTL"
+    - "TEMPHOME"
+  
+  # Occupancy/demographics
+  occupancy:
+    - "NHSLDMEM"
+    - "NUMCHILD"
+    - "NUMADULT1"
+    - "NUMADULT2"
+    - "HHAGE"
+    - "EMPLOYHH"
+    - "ATHOME"
+  
+  # COVID controls (Plan A)
+  covid_controls:
+    - "TELLWORK"  # Telework indicator
+    - "ATHOME"    # Someone at home during day
+  
+  # Auxiliary heating
+  auxiliary:
+    - "USEEQUIPAUX"
+    - "BASEHEAT"
+    - "ATTCHEAT"
+    - "GARGHEAT"
+  
+  # Leakage blacklist - DO NOT use as features
+  leakage_blacklist:
+    - "DOLLAREL"
+    - "DOLLARNG"
+    - "DOLLARLP"
+    - "DOLLARFO"
+    - "TOTALDOL"
+    - "TOTALDOLSPH"
+    - "DOLELSPH"
+    - "DOLNGSPH"
+    - "DOLLPSPH"
+    - "DOLFOSPH"
+
+# ============================================================================
+# NESTED CV CONFIGURATION (Section 10)
+# ============================================================================
+nested_cv:
+  outer_folds: 5
+  inner_folds: 3
+  random_state: 42
+  
+  # Stratification columns
+  stratify_by:
+    - "DIVISION"
+    - "tech_group"
+    - "HDD_bin"
+  
+  # HDD binning for stratification
+  hdd_bins: [0, 2000, 4000, 6000, 8000, 100000]
+  hdd_bin_labels: ["very_mild", "mild", "moderate", "cold", "very_cold"]
+
+# ============================================================================
+# MODEL CONFIGURATION (Section 6)
+# ============================================================================
+models:
+  # LightGBM (primary model)
+  lightgbm:
+    # Base parameters
+    base_params:
+      objective: "gamma"  # Non-negative predictions
+      metric: "rmse"
+      boosting_type: "gbdt"
+      verbose: -1
+      random_state: 42
+    
+    # Hyperparameter search space for inner CV
+    search_space:
+      n_estimators: [100, 200, 300, 500]
+      max_depth: [4, 6, 8, 10, -1]
+      learning_rate: [0.01, 0.05, 0.1]
+      num_leaves: [15, 31, 63, 127]
+      min_child_samples: [10, 20, 50, 100]
+      subsample: [0.7, 0.8, 0.9, 1.0]
+      colsample_bytree: [0.7, 0.8, 0.9, 1.0]
+      reg_alpha: [0, 0.1, 1.0]
+      reg_lambda: [0, 0.1, 1.0]
+    
+    # Number of random search iterations
+    n_search_iter: 30
+    
+    # Monotonic constraints (optional)
+    monotone_constraints:
+      HDD65: 1   # Increasing HDD -> Increasing energy
+      ADQINSUL: -1  # Better insulation -> Less energy (needs encoding check)
+  
+  # EBM (Explainable Boosting Machine)
+  ebm:
+    base_params:
+      max_bins: 256
+      interactions: 10
+      outer_bags: 8
+      inner_bags: 0
+      learning_rate: 0.01
+      validation_size: 0.15
+      early_stopping_rounds: 50
+      random_state: 42
+    
+    search_space:
+      max_rounds: [5000, 10000, 15000]
+      max_leaves: [3, 4, 5]
+      min_samples_leaf: [2, 5, 10]
+
+# ============================================================================
+# EVALUATION CONFIGURATION (Section 8)
+# ============================================================================
+evaluation:
+  # Scientific metrics
+  metrics:
+    - "weighted_rmse"
+    - "weighted_mae"
+    - "weighted_r2"
+    - "weighted_mape"
+  
+  # Physics sanity checks
+  physics_checks:
+    # Fraction of predictions that are negative
+    negative_prediction_threshold: 0.0
+    # HDD sensitivity direction (should be positive)
+    hdd_sensitivity_direction: "positive"
+    # HDD bins for residual analysis
+    hdd_residual_bins: [0, 1000, 2000, 3000, 4000, 5000, 6000, 8000, 100000]
+  
+  # Policy metrics
+  policy:
+    # Percentile for "high use" targeting
+    target_percentile: 90
+    # Policy scores to evaluate
+    scores:
+      - "high_use"       # Top predicted E_heat
+      - "high_intensity" # Top predicted E_heat/Area
+      - "excess_demand"  # High residual (inefficiency proxy)
+
+# ============================================================================
+# UNCERTAINTY QUANTIFICATION (Section 9)
+# ============================================================================
+uncertainty:
+  # Jackknife variance estimation
+  jackknife:
+    n_replicates: 60
+    confidence_level: 0.95
+  
+  # Refit sensitivity check
+  refit_sensitivity:
+    # Number of replicates to refit (subset of 60)
+    n_refit_replicates: 10
+    # Which replicates to use (evenly spaced)
+    refit_indices: [1, 7, 13, 19, 25, 31, 37, 43, 49, 55]
+
+# ============================================================================
+# SENSITIVITY ANALYSIS (Section 14)
+# ============================================================================
+sensitivity:
+  analyses:
+    - name: "target_comparison"
+      description: "Compare E vs E/Area targets"
+      variations:
+        - target: "TOTALBTUSPH"
+        - target: "E_heat_per_area"
+    
+    - name: "climate_restriction"
+      description: "Exclude HDD < 1000"
+      variations:
+        - hdd_min: 0
+        - hdd_min: 1000
+    
+    - name: "covid_controls"
+      description: "Direct vs proxy vs none"
+      variations:
+        - covid: "direct"
+        - covid: "proxy"
+        - covid: "none"
+    
+    - name: "tech_assignment"
+      description: "Technology grouping rules"
+      variations:
+        - rule: "primary_only"
+        - rule: "with_hybrid"
+        - rule: "exclude_hybrid"
+    
+    - name: "monotonic_constraints"
+      description: "With vs without constraints"
+      variations:
+        - constraints: true
+        - constraints: false
+
+# ============================================================================
+# OUTPUT CONFIGURATION
+# ============================================================================
+output:
+  figures_dir: "outputs/figures/"
+  tables_dir: "outputs/tables/"
+  models_dir: "outputs/models/"
+  
+  # Figure settings
+  figure_dpi: 300
+  figure_format: "png"

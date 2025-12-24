@@ -1,0 +1,22 @@
+\begin{tabular}{llllllllll}
+\toprule
+Model & tech_group & weighted_rmse_mean & weighted_rmse_std & weighted_mae_mean & weighted_mae_std & weighted_r2_mean & weighted_r2_std & weighted_bias_mean & weighted_bias_std \\
+\midrule
+Physics Baseline & combustion & 27,959 & 966 & 19,946 & 495 & 0.403 & 0.034 & -3 & 479 \\
+Physics Baseline & electric_heat_pump & 10,163 & 1,846 & 5,869 & 262 & 0.367 & 0.075 & -0 & 226 \\
+Physics Baseline & electric_resistance & 11,156 & 1,821 & 7,154 & 671 & 0.411 & 0.022 & -2 & 975 \\
+Physics Baseline & hybrid_ambiguous & 20,614 & 438 & 13,037 & 356 & -0.667 & 0.019 & -13,037 & 356 \\
+LightGBM (Monolithic) & combustion & 22,427 & 303 & 15,255 & 192 & 0.616 & 0.008 & 3,007 & 181 \\
+LightGBM (Monolithic) & electric_heat_pump & 9,007 & 2,104 & 4,980 & 163 & 0.504 & 0.111 & 318 & 503 \\
+LightGBM (Monolithic) & electric_resistance & 9,674 & 1,247 & 5,583 & 514 & 0.554 & 0.018 & -77 & 765 \\
+LightGBM (Monolithic) & hybrid_ambiguous & 11,519 & 458 & 6,605 & 314 & 0.479 & 0.030 & -275 & 434 \\
+XGBoost & combustion & 21,856 & 253 & 14,730 & 33 & 0.636 & 0.003 & 8 & 364 \\
+XGBoost & electric_heat_pump & 9,733 & 2,053 & 5,522 & 189 & 0.419 & 0.110 & 879 & 702 \\
+XGBoost & electric_resistance & 9,525 & 1,399 & 5,878 & 434 & 0.569 & 0.035 & -319 & 1,006 \\
+XGBoost & hybrid_ambiguous & 12,063 & 530 & 7,105 & 310 & 0.429 & 0.043 & 293 & 533 \\
+CatBoost & combustion & 21,522 & 342 & 14,416 & 176 & 0.647 & 0.006 & 62 & 277 \\
+CatBoost & electric_heat_pump & 9,220 & 2,484 & 5,092 & 202 & 0.480 & 0.155 & 340 & 842 \\
+CatBoost & electric_resistance & 9,185 & 1,496 & 5,445 & 428 & 0.600 & 0.035 & -315 & 1,420 \\
+CatBoost & hybrid_ambiguous & 11,475 & 565 & 6,801 & 240 & 0.483 & 0.039 & 41 & 430 \\
+\bottomrule
+\end{tabular}

@@ -1,0 +1,26 @@
+\begin{tabular}{llllllllll}
+\toprule
+Model & tech_group & weighted_rmse_mean & weighted_rmse_std & weighted_mae_mean & weighted_mae_std & weighted_r2_mean & weighted_r2_std & weighted_bias_mean & weighted_bias_std \\
+\midrule
+Physics Baseline & combustion & 27,950 & 1,169 & 19,946 & 483 & 0.404 & 0.019 & -3 & 773 \\
+Physics Baseline & electric_heat_pump & 9,938 & 2,892 & 5,868 & 326 & 0.381 & 0.068 & -1 & 481 \\
+Physics Baseline & electric_resistance & 11,211 & 880 & 7,146 & 366 & 0.406 & 0.073 & 4 & 521 \\
+Physics Baseline & hybrid_ambiguous & 20,568 & 1,750 & 13,040 & 676 & -0.686 & 0.112 & -13,040 & 676 \\
+LightGBM (Monolithic) & combustion & 22,216 & 922 & 15,166 & 288 & 0.623 & 0.012 & 3,253 & 892 \\
+LightGBM (Monolithic) & electric_heat_pump & 8,734 & 2,873 & 4,849 & 427 & 0.524 & 0.095 & 357 & 471 \\
+LightGBM (Monolithic) & electric_resistance & 9,137 & 1,360 & 5,384 & 440 & 0.604 & 0.085 & 218 & 286 \\
+LightGBM (Monolithic) & hybrid_ambiguous & 11,401 & 1,646 & 6,580 & 702 & 0.487 & 0.044 & -147 & 933 \\
+XGBoost & combustion & 21,426 & 891 & 14,321 & 293 & 0.650 & 0.009 & -29 & 749 \\
+XGBoost & electric_heat_pump & 9,132 & 2,751 & 5,127 & 451 & 0.476 & 0.090 & 773 & 428 \\
+XGBoost & electric_resistance & 9,348 & 1,220 & 5,604 & 425 & 0.590 & 0.055 & 164 & 493 \\
+XGBoost & hybrid_ambiguous & 11,552 & 1,311 & 6,796 & 609 & 0.470 & 0.041 & 434 & 738 \\
+CatBoost & combustion & 21,259 & 910 & 14,238 & 370 & 0.655 & 0.010 & 8 & 779 \\
+CatBoost & electric_heat_pump & 8,927 & 2,818 & 5,003 & 440 & 0.502 & 0.086 & 353 & 462 \\
+CatBoost & electric_resistance & 8,986 & 1,081 & 5,415 & 421 & 0.620 & 0.058 & -108 & 629 \\
+CatBoost & hybrid_ambiguous & 11,402 & 1,445 & 6,713 & 616 & 0.485 & 0.041 & -36 & 766 \\
+Tabular Transformer & combustion & 26,189 & 1,644 & 17,850 & 801 & 0.477 & 0.035 & 1,199 & 1,868 \\
+Tabular Transformer & electric_heat_pump & 10,142 & 2,923 & 6,191 & 508 & 0.354 & 0.078 & 936 & 1,001 \\
+Tabular Transformer & electric_resistance & 10,854 & 1,010 & 7,288 & 415 & 0.446 & 0.056 & 1,497 & 1,655 \\
+Tabular Transformer & hybrid_ambiguous & 13,016 & 1,575 & 8,322 & 689 & 0.327 & 0.067 & 716 & 1,482 \\
+\bottomrule
+\end{tabular}

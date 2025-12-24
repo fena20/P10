@@ -1,0 +1,5 @@
+{
+  "max_leaves": 3,
+  "max_rounds": 15000,
+  "min_samples_leaf": 10
+}

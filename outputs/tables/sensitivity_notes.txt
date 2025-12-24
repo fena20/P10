@@ -1,0 +1,21 @@
+
+# Sensitivity Analysis Notes
+# --------------------------
+# 1. Monotonic Constraints: Model uses Tweedie objective with optional monotonic
+#    constraints on HDD (positive) and TOTSQFT_EN (positive). Ablation shows
+#    constraints slightly increase RMSE but improve physics plausibility.
+#
+# 2. COVID Controls: Model includes TELLWORK and ATHOME indicators as proxies
+#    for pandemic-era occupancy. Sensitivity to COVID control mode is documented
+#    but full ablation requires separate runs.
+#
+# 3. Technology Assignment: Using primary_only rule. Hybrid/ambiguous cases
+#    are modeled separately but results should be interpreted with caution.
+#
+# 4. Calibration: Model applies isotonic post-calibration to reduce tail bias.
+#    This improves calibration slope but does not fully eliminate underprediction
+#    at high consumption levels.
+#
+# 5. Subgroup wR²: Low/negative wR² for electric subgroups reflects high noise
+#    in RECS end-use estimates and low within-group variance. Weighted correlation
+#    (r) is provided as complementary metric.

@@ -1,0 +1,388 @@
+data:
+  raw_path: data/raw/recs2020_public_v7.csv
+  processed_path: data/processed/
+  target_column: TOTALBTUSPH
+  targets:
+    primary: TOTALBTUSPH
+    per_area: E_heat_per_area
+  weight_column: NWEIGHT
+  replicate_weights_prefix: NWEIGHT
+  n_replicate_weights: 60
+  area_column: TOTSQFT_EN
+hardware:
+  device: auto   # auto|cpu|cuda
+  gpu_id: 0
+  lgbm_gpu_platform_id: 0
+
+technology_groups:
+  combustion:
+    equipm_codes:
+    - 2
+    - 3
+    - 7
+    - 8
+    fuelheat_codes:
+    - 1
+    - 2
+    - 3
+    - 7
+    description: Combustion-based heating systems
+  electric_heat_pump:
+    equipm_codes:
+    - 4
+    fuelheat_codes:
+    - 5
+    description: Electric heat pump systems
+  electric_resistance:
+    equipm_codes:
+    - 5
+    - 10
+    fuelheat_codes:
+    - 5
+    description: Electric resistance heating
+  hybrid_ambiguous:
+    equipm_codes:
+    - 13
+    - 99
+    description: Hybrid or ambiguous systems
+  excluded:
+    equipm_codes:
+    - -2
+    description: No heating system
+features:
+  climate:
+  - HDD65
+  - CDD65
+  - HDD30YR_PUB
+  - DIVISION
+  - BA_climate
+  - IECC_climate_code
+  building:
+  - TYPEHUQ
+  - YEARMADERANGE
+  - STORIES
+  - TOTSQFT_EN
+  - TOTHSQFT
+  - TOTCSQFT
+  - BEDROOMS
+  - TOTROOMS
+  - CELLR
+  - CRAWL
+  - CONCRETE
+  - ATTIC
+  - ATTICFIN
+  - WALLTYPE
+  - ROOFTYPE
+  - WINDOWS
+  - TYPEGLASS
+  - WINFRAME
+  - ADQINSUL
+  - DRAFTY
+  equipment:
+  - EQUIPM
+  - FUELHEAT
+  - EQUIPAGE
+  - EQUIPAUX
+  - FUELAUX
+  - HEATCNTL
+  - TEMPHOME
+  occupancy:
+  - NHSLDMEM
+  - NUMCHILD
+  - NUMADULT1
+  - NUMADULT2
+  - HHAGE
+  - EMPLOYHH
+  - ATHOME
+  covid_controls:
+  - TELLWORK
+  - ATHOME
+  auxiliary:
+  - USEEQUIPAUX
+  - BASEHEAT
+  - ATTCHEAT
+  - GARGHEAT
+  leakage_blacklist:
+  - DOLLAREL
+  - DOLLARNG
+  - DOLLARLP
+  - DOLLARFO
+  - TOTALDOL
+  - TOTALDOLSPH
+  - DOLELSPH
+  - DOLNGSPH
+  - DOLLPSPH
+  - DOLFOSPH
+nested_cv:
+  outer_folds: 5
+  inner_folds: 3
+  random_state: 42
+  stratify_by:
+  - DIVISION
+  - tech_group
+  - HDD_bin
+  hdd_bins:
+  - 0
+  - 2000
+  - 4000
+  - 6000
+  - 8000
+  - 100000
+  hdd_bin_labels:
+  - very_mild
+  - mild
+  - moderate
+  - cold
+  - very_cold
+models:
+  lightgbm:
+    base_params:
+      objective: gamma
+      metric: rmse
+      boosting_type: gbdt
+      verbose: -1
+      random_state: 42
+    search_space:
+      n_estimators:
+      - 100
+      - 200
+      - 300
+      - 500
+      max_depth:
+      - 4
+      - 6
+      - 8
+      - 10
+      - -1
+      learning_rate:
+      - 0.01
+      - 0.05
+      - 0.1
+      num_leaves:
+      - 15
+      - 31
+      - 63
+      - 127
+      min_child_samples:
+      - 10
+      - 20
+      - 50
+      - 100
+      subsample:
+      - 0.7
+      - 0.8
+      - 0.9
+      - 1.0
+      colsample_bytree:
+      - 0.7
+      - 0.8
+      - 0.9
+      - 1.0
+      reg_alpha:
+      - 0
+      - 0.1
+      - 1.0
+      reg_lambda:
+      - 0
+      - 0.1
+      - 1.0
+    n_search_iter: 30
+    debiasing:
+      enabled: false
+      tail_quantile: 0.95
+      tail_multiplier: 1.5
+      cold_hdd_quantile: 0.85
+      cold_multiplier: 1.25
+      two_pass_focal: false
+      focal_gamma: 2.0
+    monotone_constraints:
+      HDD65: 1
+      ADQINSUL: -1
+  ebm:
+    base_params:
+      max_bins: 256
+      interactions: 10
+      outer_bags: 8
+      inner_bags: 0
+      learning_rate: 0.01
+      validation_size: 0.15
+      early_stopping_rounds: 50
+      random_state: 42
+    search_space:
+      max_rounds:
+      - 5000
+      - 10000
+      - 15000
+      max_leaves:
+      - 3
+      - 4
+      - 5
+      min_samples_leaf:
+      - 2
+      - 5
+      - 10
+  xgboost:
+    n_search_iter: 20
+    search_space:
+      n_estimators:
+      - 600
+      - 1000
+      - 1400
+      max_depth:
+      - 4
+      - 6
+      - 8
+      learning_rate:
+      - 0.03
+      - 0.05
+      - 0.1
+      subsample:
+      - 0.7
+      - 0.85
+      - 1.0
+      colsample_bytree:
+      - 0.7
+      - 0.85
+      - 1.0
+      reg_lambda:
+      - 0.5
+      - 1.0
+      - 2.0
+      reg_alpha:
+      - 0.0
+      - 0.1
+      - 0.5
+  catboost:
+    n_search_iter: 15
+    search_space:
+      iterations:
+      - 2000
+      - 4000
+      depth:
+      - 6
+      - 8
+      - 10
+      learning_rate:
+      - 0.03
+      - 0.05
+      - 0.1
+      l2_leaf_reg:
+      - 1.0
+      - 3.0
+      - 5.0
+  tabular_transformer:
+    n_search_iter: 8
+    search_space:
+      d_model:
+      - 64
+      - 128
+      n_heads:
+      - 4
+      - 8
+      n_layers:
+      - 2
+      - 3
+      dropout:
+      - 0.05
+      - 0.1
+      lr:
+      - 0.001
+      - 0.0005
+      batch_size:
+      - 256
+      - 512
+      epochs:
+      - 20
+      - 40
+evaluation:
+  metrics:
+  - weighted_rmse
+  - weighted_mae
+  - weighted_r2
+  - weighted_mape
+  physics_checks:
+    negative_prediction_threshold: 0.0
+    hdd_sensitivity_direction: positive
+    hdd_residual_bins:
+    - 0
+    - 1000
+    - 2000
+    - 3000
+    - 4000
+    - 5000
+    - 6000
+    - 8000
+    - 100000
+  policy:
+    target_percentile: 90
+    scores:
+    - high_use
+    - high_intensity
+    - excess_demand
+uncertainty:
+  jackknife:
+    n_replicates: 60
+    confidence_level: 0.95
+  refit_sensitivity:
+    n_refit_replicates: 10
+    refit_indices:
+    - 1
+    - 7
+    - 13
+    - 19
+    - 25
+    - 31
+    - 37
+    - 43
+    - 49
+    - 55
+sensitivity:
+  analyses:
+  - name: target_comparison
+    description: Compare E vs E/Area targets
+    variations:
+    - target: TOTALBTUSPH
+    - target: E_heat_per_area
+  - name: climate_restriction
+    description: Exclude HDD < 1000
+    variations:
+    - hdd_min: 0
+    - hdd_min: 1000
+  - name: covid_controls
+    description: Direct vs proxy vs none
+    variations:
+    - covid: direct
+    - covid: proxy
+    - covid: none
+  - name: tech_assignment
+    description: Technology grouping rules
+    variations:
+    - rule: primary_only
+    - rule: with_hybrid
+    - rule: exclude_hybrid
+  - name: monotonic_constraints
+    description: With vs without constraints
+    variations:
+    - constraints: true
+    - constraints: false
+output:
+  figures_dir: outputs/figures/
+  tables_dir: outputs/tables/
+  models_dir: outputs/models/
+  figure_dpi: 300
+  figure_format: png
+benchmarks:
+  enabled: true
+  models:
+  - lightgbm_monolithic
+  - ebm
+  - xgboost
+  - catboost
+  - tabular_transformer
+  save_plots: true
+  metrics_for_plots:
+  - weighted_rmse
+  - weighted_mae
+external_validation:
+  enabled: false
+  utility_bills_path: ''
