@@ -122,6 +122,42 @@ hardware:
   gpu_id: 0
   lgbm_gpu_platform_id: 0
 models:
+  # ==========================================================================
+  # TAIL BIAS MITIGATION (Priority 1)
+  # ==========================================================================
+  tail_bias:
+    # 1.1 Quantile Regression
+    quantile_enabled: true
+    quantile_alpha: 0.90  # 90th percentile for policy targeting
+    
+    # 1.2 Tail-weighted training
+    tail_weighting:
+      mode: 'power'  # 'none', 'power', 'quantile_step'
+      alpha: 1.0  # Power parameter: w = clip((y/median)^alpha, 1, cap)
+      cap: 20.0  # Maximum tail weight multiplier
+      quantile: 0.90  # Threshold for quantile_step mode
+      step_multiplier: 3.0  # Multiplier for quantile_step mode
+    
+    # Sweep settings for tail weighting sensitivity
+    tail_weighting_sweep:
+      enabled: false
+      alpha_values: [0.5, 1.0, 1.5, 2.0]
+      cap_values: [10, 20, 50]
+  
+  # ==========================================================================
+  # OBJECTIVE COMPARISON (Priority 2.1)
+  # ==========================================================================
+  objective_comparison:
+    enabled: false  # Set to true to run Tweedie vs Gamma shootout
+    objectives:
+      - name: tweedie
+        params:
+          objective: tweedie
+          tweedie_variance_power: 1.5
+      - name: gamma
+        params:
+          objective: gamma
+  
   catboost:
     n_search_iter: 10
     search_space:
@@ -386,3 +422,26 @@ uncertainty:
     - 43
     - 49
     - 55
+
+# ==========================================================================
+# GROUP CALIBRATION (Priority 4.1 - Equity Mitigation)
+# ==========================================================================
+group_calibration:
+  enabled: true
+  # Strategy: 'tenure', 'climate', 'tech', 'tech_climate', 'income', 'housing'
+  grouping_strategy: 'climate'  # Start with climate (cold regions)
+  min_group_size: 200
+  combine_groups: true
+  # Additional strategies to run for comparison
+  additional_strategies:
+    - tenure
+    - tech_climate
+
+# ==========================================================================
+# RUN MANIFEST (Priority 2.2 - Reproducibility)
+# ==========================================================================
+run_manifest:
+  enabled: true
+  include_dataset_fingerprint: true
+  include_hardware_info: true
+  include_package_versions: true

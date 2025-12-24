@@ -38,6 +38,18 @@ from src.features.builder import FeatureBuilder, create_feature_matrix
 from src.models.baselines import PhysicsBaselines, MonolithicBaseline
 from src.models.main_models import HeatingDemandModels, LightGBMHeatingModel, EBMHeatingModel
 from src.models.advanced_models import XGBoostRegressorModel, CatBoostRegressorModel, TabularTransformerModel
+from src.models.tail_bias_models import (
+    QuantileLightGBMHeatingModel, 
+    TailWeightedLightGBMHeatingModel,
+    TailBiasMetrics,
+    compare_quantile_vs_mean_models
+)
+from src.models.group_calibration import (
+    EquityAwareCalibrationPipeline,
+    add_climate_bin,
+    compute_calibration_equity_report
+)
+from src.utils.run_manifest import create_run_manifest, RunManifest
 from src.evaluation.metrics import WeightedMetrics, PhysicsDiagnostics, ErrorEquityAnalysis
 from src.evaluation.nested_cv import NestedCrossValidator, compare_split_vs_monolithic
 from src.evaluation.model_comparison import create_split_vs_monolithic_table, create_h1_summary_table
@@ -200,6 +212,9 @@ def run_data_loading_and_preprocessing(config: dict) -> tuple:
     tech_summary = preprocessor.get_tech_group_summary(df)
     print("\nTechnology Group Summary:")
     print(tech_summary.to_string())
+    
+    # Add climate bins for group-conditional calibration (Priority 4.1)
+    df = add_climate_bin(df, hdd_column='HDD65', bin_column='HDD_bin')
     
     # Create verification table
     verification = loader.create_verification_table()
@@ -489,6 +504,238 @@ def run_nested_cv(df: pd.DataFrame,
         'mono_fold_results': mono_cv.fold_results_
     }
 
+
+
+def run_tail_bias_mitigation(df: pd.DataFrame,
+                              feature_builder: FeatureBuilder,
+                              cv_results: dict,
+                              config: dict,
+                              n_outer_folds: int = 5,
+                              output_dir: str = 'outputs/') -> dict:
+    """
+    Step 5C: Run tail bias mitigation analysis (Priority 1).
+    
+    Implements:
+    - Quantile regression (q=0.90) for policy-aligned predictions
+    - Tail-weighted training to reduce upper-tail underprediction
+    - Comparison with baseline model
+    
+    Parameters
+    ----------
+    df : DataFrame
+        Preprocessed data
+    feature_builder : FeatureBuilder
+        Feature preprocessor
+    cv_results : dict
+        Results from baseline CV (contains predictions)
+    config : dict
+        Configuration
+    n_outer_folds : int
+        Number of outer folds
+    output_dir : str
+        Output directory
+        
+    Returns
+    -------
+    dict
+        Tail bias mitigation results
+    """
+    tail_cfg = (config.get('models', {}) or {}).get('tail_bias', {}) or {}
+    
+    if not bool(tail_cfg.get('quantile_enabled', False)):
+        logger.info("Tail bias mitigation disabled in config; skipping.")
+        return {}
+    
+    print_section_header("TAIL BIAS MITIGATION (Priority 1)")
+    
+    out_dir = Path(output_dir) / 'tail_bias'
+    out_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Prepare data
+    y = df['TOTALBTUSPH'].values
+    weights = df['NWEIGHT'].values
+    tech_group = df['tech_group'].values
+    
+    feature_cols = feature_builder.get_feature_columns(include_tech_group=True)
+    X = df[[c for c in feature_cols if c in df.columns]].copy()
+    
+    meta_cols = ['HDD65', 'DIVISION', 'TYPEHUQ', 'KOWNRENT', 'MONEYPY', 'TOTSQFT_EN', 'HDD_bin', 'tech_group']
+    metadata = df[[c for c in meta_cols if c in df.columns]].copy()
+    
+    # Get baseline predictions
+    baseline_predictions = cv_results.get('predictions', np.zeros(len(df)))
+    
+    results = {
+        'baseline_predictions': baseline_predictions
+    }
+    
+    # Compute tail bias metrics for baseline
+    tbm = TailBiasMetrics(k_percentile=10)
+    baseline_tail_metrics = tbm.compute_all_metrics(y, baseline_predictions, weights)
+    
+    logger.info(f"\nBaseline Top-10% Underprediction: {baseline_tail_metrics['top_decile_bias_pct']:+.1f}%")
+    logger.info(f"Baseline Lift@10: {baseline_tail_metrics['lift_at_k']:.2f}")
+    logger.info(f"Baseline NDCG: {baseline_tail_metrics['ndcg']:.3f}")
+    
+    results['baseline_tail_metrics'] = baseline_tail_metrics
+    
+    # Run quantile model if enabled
+    quantile_alpha = float(tail_cfg.get('quantile_alpha', 0.90))
+    
+    logger.info(f"\nRunning quantile regression (q={quantile_alpha})...")
+    
+    lgb_cfg = (config.get('models', {}) or {}).get('lightgbm', {}) or {}
+    n_search_iter = int(lgb_cfg.get('n_search_iter', 10))
+    
+    param_grid = {
+        'n_estimators': [200, 300],
+        'max_depth': [4, 6, 8],
+        'learning_rate': [0.03, 0.05],
+        'num_leaves': [31, 63],
+        'min_child_samples': [20, 50],
+    }
+    
+    def quantile_factory(**params):
+        return QuantileLightGBMHeatingModel(params=params, quantile=quantile_alpha)
+    
+    try:
+        cv_quantile = NestedCrossValidator(
+            outer_folds=n_outer_folds,
+            inner_folds=3,
+            n_search_iter=n_search_iter,
+            random_state=42,
+            output_dir=str(out_dir / 'quantile')
+        )
+        
+        q_result = cv_quantile.run(
+            X, pd.Series(y), pd.Series(weights),
+            model_factory=quantile_factory,
+            param_grid=param_grid,
+            feature_builder=feature_builder,
+            additional_metadata=metadata
+        )
+        
+        quantile_predictions = cv_quantile.outer_predictions_
+        quantile_tail_metrics = tbm.compute_all_metrics(y, quantile_predictions, weights)
+        
+        logger.info(f"\nQuantile (q={quantile_alpha}) Top-10% Underprediction: {quantile_tail_metrics['top_decile_bias_pct']:+.1f}%")
+        logger.info(f"Quantile Lift@10: {quantile_tail_metrics['lift_at_k']:.2f}")
+        logger.info(f"Quantile NDCG: {quantile_tail_metrics['ndcg']:.3f}")
+        
+        results['quantile_predictions'] = quantile_predictions
+        results['quantile_tail_metrics'] = quantile_tail_metrics
+        results['quantile_cv_result'] = q_result
+        
+    except Exception as e:
+        logger.warning(f"Quantile regression failed: {e}")
+    
+    # Run tail-weighted model if configured
+    tw_cfg = tail_cfg.get('tail_weighting', {}) or {}
+    tw_mode = str(tw_cfg.get('mode', 'none'))
+    
+    if tw_mode != 'none':
+        logger.info(f"\nRunning tail-weighted training (mode={tw_mode})...")
+        
+        tw_alpha = float(tw_cfg.get('alpha', 1.0))
+        tw_cap = float(tw_cfg.get('cap', 20.0))
+        
+        def tw_factory(**params):
+            return TailWeightedLightGBMHeatingModel(
+                params=params,
+                tail_weighting_mode=tw_mode,
+                tail_alpha=tw_alpha,
+                tail_cap=tw_cap,
+                apply_isotonic_calibration=True
+            )
+        
+        try:
+            cv_tw = NestedCrossValidator(
+                outer_folds=n_outer_folds,
+                inner_folds=3,
+                n_search_iter=n_search_iter,
+                random_state=42,
+                output_dir=str(out_dir / 'tail_weighted')
+            )
+            
+            tw_result = cv_tw.run(
+                X, pd.Series(y), pd.Series(weights),
+                model_factory=tw_factory,
+                param_grid=param_grid,
+                feature_builder=feature_builder,
+                additional_metadata=metadata
+            )
+            
+            tw_predictions = cv_tw.outer_predictions_
+            tw_tail_metrics = tbm.compute_all_metrics(y, tw_predictions, weights)
+            
+            logger.info(f"\nTail-Weighted Top-10% Underprediction: {tw_tail_metrics['top_decile_bias_pct']:+.1f}%")
+            logger.info(f"Tail-Weighted Lift@10: {tw_tail_metrics['lift_at_k']:.2f}")
+            
+            results['tail_weighted_predictions'] = tw_predictions
+            results['tail_weighted_tail_metrics'] = tw_tail_metrics
+            results['tail_weighted_cv_result'] = tw_result
+            
+        except Exception as e:
+            logger.warning(f"Tail-weighted training failed: {e}")
+    
+    # Create comparison table
+    comparison_rows = [
+        {
+            'Model': 'Baseline (Tweedie)',
+            'Top-10% Bias (%)': baseline_tail_metrics['top_decile_bias_pct'],
+            'Lift@10': baseline_tail_metrics['lift_at_k'],
+            'NDCG': baseline_tail_metrics['ndcg'],
+            'Precision@10': baseline_tail_metrics['precision_at_k'],
+            'Recall@10': baseline_tail_metrics['recall_at_k']
+        }
+    ]
+    
+    if 'quantile_tail_metrics' in results:
+        comparison_rows.append({
+            'Model': f'Quantile (q={quantile_alpha})',
+            'Top-10% Bias (%)': results['quantile_tail_metrics']['top_decile_bias_pct'],
+            'Lift@10': results['quantile_tail_metrics']['lift_at_k'],
+            'NDCG': results['quantile_tail_metrics']['ndcg'],
+            'Precision@10': results['quantile_tail_metrics']['precision_at_k'],
+            'Recall@10': results['quantile_tail_metrics']['recall_at_k']
+        })
+    
+    if 'tail_weighted_tail_metrics' in results:
+        comparison_rows.append({
+            'Model': f'Tail-Weighted (α={tw_alpha})',
+            'Top-10% Bias (%)': results['tail_weighted_tail_metrics']['top_decile_bias_pct'],
+            'Lift@10': results['tail_weighted_tail_metrics']['lift_at_k'],
+            'NDCG': results['tail_weighted_tail_metrics']['ndcg'],
+            'Precision@10': results['tail_weighted_tail_metrics']['precision_at_k'],
+            'Recall@10': results['tail_weighted_tail_metrics']['recall_at_k']
+        })
+    
+    comparison_df = pd.DataFrame(comparison_rows)
+    comparison_df.to_csv(out_dir / 'tail_bias_comparison.csv', index=False, encoding='utf-8-sig')
+    
+    # By technology group
+    all_tech_rows = []
+    predictions_dict = {'Baseline': baseline_predictions}
+    if 'quantile_predictions' in results:
+        predictions_dict['Quantile'] = results['quantile_predictions']
+    if 'tail_weighted_predictions' in results:
+        predictions_dict['Tail-Weighted'] = results['tail_weighted_predictions']
+    
+    for model_name, y_pred in predictions_dict.items():
+        tech_df = tbm.compute_metrics_by_tech_group(y, y_pred, weights, tech_group)
+        tech_df['Model'] = model_name
+        all_tech_rows.append(tech_df)
+    
+    if all_tech_rows:
+        tech_comparison = pd.concat(all_tech_rows, ignore_index=True)
+        tech_comparison.to_csv(out_dir / 'tail_bias_by_tech_group.csv', index=False, encoding='utf-8-sig')
+        results['by_tech_group'] = tech_comparison
+    
+    results['comparison_df'] = comparison_df
+    
+    logger.info(f"\nTail bias analysis saved to: {out_dir}")
+    
+    return results
 
 
 def run_sota_benchmarks(df: pd.DataFrame,
@@ -1918,6 +2165,14 @@ def main():
     ensure_dir(f"{args.output}/models")
     ensure_dir(f"{args.output}/tuning")
     
+    # Initialize run manifest (Priority 2.2)
+    manifest = create_run_manifest(
+        config=config,
+        output_dir=args.output,
+        experiment_name='heating_demand_analysis'
+    )
+    manifest.start()
+    
     # Run pipeline
     with Timer("Complete analysis pipeline"):
         
@@ -1941,6 +2196,21 @@ def main():
                 run_sota_benchmarks(df, feature_builder, config, cv_results, baseline_predictions, args.n_outer_folds, args.output)
             except Exception as e:
                 logger.warning(f"SOTA benchmarks step failed: {e}")
+            
+            # Step 5C: Tail bias mitigation (Priority 1)
+            tail_bias_results = {}
+            try:
+                tail_bias_results = run_tail_bias_mitigation(
+                    df, feature_builder, cv_results, config,
+                    args.n_outer_folds, args.output
+                )
+                manifest.add_result('tail_bias', {
+                    'baseline_top10_bias': tail_bias_results.get('baseline_tail_metrics', {}).get('top_decile_bias_pct'),
+                    'quantile_top10_bias': tail_bias_results.get('quantile_tail_metrics', {}).get('top_decile_bias_pct'),
+                    'tail_weighted_top10_bias': tail_bias_results.get('tail_weighted_tail_metrics', {}).get('top_decile_bias_pct')
+                })
+            except Exception as e:
+                logger.warning(f"Tail bias mitigation step failed: {e}")
         else:
             logger.info("Skipping nested CV (--skip-cv flag)")
             # Use simple train/predict for testing
@@ -1984,9 +2254,25 @@ def main():
         # Save results
         save_results(df, preprocessor, cv_results, policy_results,
                     uncertainty_results, diagnostic_results, args.output)
+        
+        # Add final results to manifest
+        if cv_results and 'cv_result' in cv_results:
+            manifest.add_result('cv_metrics', cv_results['cv_result'].outer_metrics)
+        if policy_results and 'policy_metrics' in policy_results:
+            pm = policy_results['policy_metrics']
+            manifest.add_result('policy_metrics', {
+                'precision_at_k': pm.get('precision_at_k', {}).get('estimate') if isinstance(pm.get('precision_at_k'), dict) else pm.get('precision_at_k'),
+                'recall_at_k': pm.get('recall_at_k', {}).get('estimate') if isinstance(pm.get('recall_at_k'), dict) else pm.get('recall_at_k'),
+                'lift_at_k': pm.get('lift_at_k', {}).get('estimate') if isinstance(pm.get('lift_at_k'), dict) else pm.get('lift_at_k'),
+            })
+    
+    # Finalize run manifest
+    manifest.end()
+    logger.info(f"Run manifest saved to: {args.output}/run_manifest.json")
     
     print_section_header("ANALYSIS COMPLETE", char="=", width=80)
     print(f"Results saved to: {args.output}")
+    print(f"Run manifest: {args.output}/run_manifest.json")
     print("="*80)
 
 
