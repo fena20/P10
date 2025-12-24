@@ -1,0 +1,710 @@
+{
+  "experiment_name": "tail_bias_mitigation",
+  "created_at": "2025-12-24T10:04:27.997698",
+  "run_id": "20251224_100427_aa462c",
+  "started_at": "2025-12-24T10:04:27.997755",
+  "results": {
+    "n_samples": 17631,
+    "tail_bias_comparison": [
+      {
+        "Model": "Baseline (Tweedie)",
+        "wRMSE": 18846.88885561233,
+        "wMAE": 11789.626587494535,
+        "wR\u00b2": 0.7032629764992147,
+        "wBias": 2329.277539551869,
+        "Top-10% Bias": -20043.682390977745,
+        "Top-10% Bias (%)": -18.043222265010858,
+        "Lift@10": 5.654997736585079,
+        "NDCG": 0.7925921605714291,
+        "Precision@10": 0.5654997736585079,
+        "Recall@10": 0.5761981849529499
+      },
+      {
+        "Model": "Quantile (q=0.90)",
+        "wRMSE": 26293.13190173532,
+        "wMAE": 18931.406569558272,
+        "wR\u00b2": 0.42246669052510233,
+        "wBias": 15087.006584753259,
+        "Top-10% Bias": -2030.1153998831433,
+        "Top-10% Bias (%)": -1.8274996913841102,
+        "Lift@10": 5.561724244653464,
+        "NDCG": 0.7322267684686462,
+        "Precision@10": 0.5561724244653464,
+        "Recall@10": 0.5561548048277191
+      },
+      {
+        "Model": "Tail-Weighted (\u03b1=1, cap=20)",
+        "wRMSE": 18275.869419629333,
+        "wMAE": 11156.98515154224,
+        "wR\u00b2": 0.7209715478397742,
+        "wBias": -382.6314759081711,
+        "Top-10% Bias": -24432.44245608832,
+        "Top-10% Bias (%)": -21.99396204315852,
+        "Lift@10": 5.619536686626098,
+        "NDCG": 0.7823074228037539,
+        "Precision@10": 0.5619536686626099,
+        "Recall@10": 0.6087110026852769
+      },
+      {
+        "Model": "Tail-Weighted (\u03b1=2, cap=50)",
+        "wRMSE": 18646.918589197565,
+        "wMAE": 11380.367563914386,
+        "wR\u00b2": 0.7095264806142088,
+        "wBias": -394.33783834709965,
+        "Top-10% Bias": -25931.22587161779,
+        "Top-10% Bias (%)": -23.343159349621683,
+        "Lift@10": 5.657232319422191,
+        "NDCG": 0.7614859901193971,
+        "Precision@10": 0.5657232319422192,
+        "Recall@10": 0.5817627558320215
+      }
+    ],
+    "delta_ci": {
+      "delta_rmse": {
+        "estimate": -7446.243046122989,
+        "se": 220.69280306141272,
+        "ci_lower": -7878.792991770549,
+        "ci_upper": -7013.693100475429,
+        "model_a": 18846.88885561233,
+        "model_b": 26293.13190173532
+      },
+      "delta_mae": {
+        "estimate": -7141.779982063737,
+        "se": 104.1967321065518,
+        "ci_lower": -7346.001824299347,
+        "ci_upper": -6937.558139828127,
+        "model_a": 11789.626587494535,
+        "model_b": 18931.406569558272
+      },
+      "delta_r2": {
+        "estimate": -0.2807962859741123,
+        "se": 0.011966637912298596,
+        "ci_lower": -0.3042504652982492,
+        "ci_upper": -0.2573421066499755,
+        "model_a": 0.7032629764992147,
+        "model_b": 0.42246669052510233
+      },
+      "delta_bias": {
+        "estimate": -12757.72904520139,
+        "se": 89.58661368380288,
+        "ci_lower": -12933.315581518546,
+        "ci_upper": -12582.142508884233,
+        "model_a": 2329.277539551869,
+        "model_b": 15087.006584753259
+      }
+    }
+  },
+  "ended_at": "2025-12-24T10:06:26.080232",
+  "runtime_seconds": 118.08,
+  "runtime_minutes": 1.97,
+  "git": {
+    "commit_hash": "f5da0ce77a75189ea4a1f59ad84ea0c563043c09",
+    "branch": "cursor/model-tail-bias-mitigation-3ca9",
+    "dirty": true
+  },
+  "package_versions": {
+    "python": "3.12.3",
+    "numpy": "2.3.5",
+    "pandas": "2.3.3",
+    "scipy": "1.16.3",
+    "scikit-learn": "not_installed",
+    "lightgbm": "4.6.0",
+    "xgboost": "not_installed",
+    "catboost": "not_installed",
+    "interpret": "not_installed",
+    "torch": "not_installed",
+    "matplotlib": "3.10.8",
+    "pyyaml": "not_installed"
+  },
+  "hardware": {
+    "platform": "Linux-6.1.147-x86_64-with-glibc2.39",
+    "processor": "x86_64",
+    "machine": "x86_64",
+    "python_implementation": "CPython",
+    "cpu_count": 4,
+    "total_memory_gb": 15.6,
+    "available_memory_gb": 14.4,
+    "cuda_available": "torch_not_installed"
+  },
+  "config": {
+    "benchmarks": {
+      "enabled": true,
+      "metrics_for_plots": [
+        "weighted_rmse",
+        "weighted_mae"
+      ],
+      "models": [
+        "lightgbm_monolithic",
+        "ebm",
+        "xgboost",
+        "catboost"
+      ],
+      "save_plots": true
+    },
+    "data": {
+      "area_column": "TOTSQFT_EN",
+      "n_replicate_weights": 60,
+      "processed_path": "data/processed/",
+      "raw_path": "data/raw/recs2020_public_v7.csv",
+      "replicate_weights_prefix": "NWEIGHT",
+      "target_column": "TOTALBTUSPH",
+      "targets": {
+        "per_area": "E_heat_per_area",
+        "primary": "TOTALBTUSPH"
+      },
+      "weight_column": "NWEIGHT"
+    },
+    "evaluation": {
+      "metrics": [
+        "weighted_rmse",
+        "weighted_mae",
+        "weighted_r2",
+        "weighted_mape"
+      ],
+      "physics_checks": {
+        "hdd_residual_bins": [
+          0,
+          1000,
+          2000,
+          3000,
+          4000,
+          5000,
+          6000,
+          8000,
+          100000
+        ],
+        "hdd_sensitivity_direction": "positive",
+        "negative_prediction_threshold": 0.0
+      },
+      "policy": {
+        "scores": [
+          "high_use",
+          "high_intensity",
+          "excess_demand"
+        ],
+        "target_percentile": 90
+      }
+    },
+    "external_validation": {
+      "enabled": false,
+      "utility_bills_path": ""
+    },
+    "feature_builder": {
+      "covid_control_mode": "direct",
+      "encode_categorical": "onehot",
+      "include_interactions": false,
+      "scale_continuous": false
+    },
+    "features": {
+      "auxiliary": [
+        "USEEQUIPAUX",
+        "BASEHEAT",
+        "ATTCHEAT",
+        "GARGHEAT"
+      ],
+      "building": [
+        "TYPEHUQ",
+        "YEARMADERANGE",
+        "STORIES",
+        "TOTSQFT_EN",
+        "TOTHSQFT",
+        "TOTCSQFT",
+        "BEDROOMS",
+        "TOTROOMS",
+        "CELLR",
+        "CRAWL",
+        "CONCRETE",
+        "ATTIC",
+        "ATTICFIN",
+        "WALLTYPE",
+        "ROOFTYPE",
+        "WINDOWS",
+        "TYPEGLASS",
+        "WINFRAME",
+        "ADQINSUL",
+        "DRAFTY"
+      ],
+      "climate": [
+        "HDD65",
+        "CDD65",
+        "HDD30YR_PUB",
+        "DIVISION",
+        "BA_climate",
+        "IECC_climate_code"
+      ],
+      "covid_controls": [
+        "TELLWORK",
+        "ATHOME"
+      ],
+      "equipment": [
+        "EQUIPM",
+        "FUELHEAT",
+        "EQUIPAGE",
+        "EQUIPAUX",
+        "FUELAUX",
+        "HEATCNTL",
+        "TEMPHOME"
+      ],
+      "leakage_blacklist": [
+        "DOLLAREL",
+        "DOLLARNG",
+        "DOLLARLP",
+        "DOLLARFO",
+        "TOTALDOL",
+        "TOTALDOLSPH",
+        "DOLELSPH",
+        "DOLNGSPH",
+        "DOLLPSPH",
+        "DOLFOSPH"
+      ],
+      "occupancy": [
+        "NHSLDMEM",
+        "NUMCHILD",
+        "NUMADULT1",
+        "NUMADULT2",
+        "HHAGE",
+        "EMPLOYHH",
+        "ATHOME"
+      ]
+    },
+    "hardware": {
+      "device": "auto",
+      "gpu_id": 0,
+      "lgbm_gpu_platform_id": 0
+    },
+    "models": {
+      "tail_bias": {
+        "quantile_enabled": true,
+        "quantile_alpha": 0.9,
+        "tail_weighting": {
+          "mode": "power",
+          "alpha": 1.0,
+          "cap": 20.0,
+          "quantile": 0.9,
+          "step_multiplier": 3.0
+        },
+        "tail_weighting_sweep": {
+          "enabled": false,
+          "alpha_values": [
+            0.5,
+            1.0,
+            1.5,
+            2.0
+          ],
+          "cap_values": [
+            10,
+            20,
+            50
+          ]
+        }
+      },
+      "objective_comparison": {
+        "enabled": false,
+        "objectives": [
+          {
+            "name": "tweedie",
+            "params": {
+              "objective": "tweedie",
+              "tweedie_variance_power": 1.5
+            }
+          },
+          {
+            "name": "gamma",
+            "params": {
+              "objective": "gamma"
+            }
+          }
+        ]
+      },
+      "catboost": {
+        "n_search_iter": 10,
+        "search_space": {
+          "depth": [
+            6,
+            8,
+            10
+          ],
+          "iterations": [
+            2000,
+            4000
+          ],
+          "l2_leaf_reg": [
+            1.0,
+            3.0,
+            5.0
+          ],
+          "learning_rate": [
+            0.03,
+            0.05,
+            0.1
+          ]
+        }
+      },
+      "ebm": {
+        "base_params": {
+          "early_stopping_rounds": 50,
+          "inner_bags": 0,
+          "interactions": 10,
+          "learning_rate": 0.01,
+          "max_bins": 256,
+          "outer_bags": 8,
+          "random_state": 42,
+          "validation_size": 0.15
+        },
+        "search_space": {
+          "max_leaves": [
+            3,
+            4,
+            5
+          ],
+          "max_rounds": [
+            5000,
+            10000,
+            15000
+          ],
+          "min_samples_leaf": [
+            2,
+            5,
+            10
+          ]
+        }
+      },
+      "lightgbm": {
+        "base_params": {
+          "boosting_type": "gbdt",
+          "metric": "rmse",
+          "objective": "gamma",
+          "random_state": 42,
+          "verbose": -1
+        },
+        "debiasing": {
+          "cold_hdd_quantile": 0.85,
+          "cold_multiplier": 1.25,
+          "enabled": false,
+          "focal_gamma": 2.0,
+          "tail_multiplier": 1.5,
+          "tail_quantile": 0.95,
+          "two_pass_focal": false
+        },
+        "monotone_constraints": {
+          "ADQINSUL": -1,
+          "HDD65": 1
+        },
+        "n_search_iter": 12,
+        "search_space": {
+          "colsample_bytree": [
+            0.7,
+            0.8,
+            0.9,
+            1.0
+          ],
+          "learning_rate": [
+            0.03,
+            0.05,
+            0.1
+          ],
+          "max_depth": [
+            6,
+            8,
+            -1
+          ],
+          "min_child_samples": [
+            20,
+            50,
+            100
+          ],
+          "n_estimators": [
+            200,
+            400,
+            800
+          ],
+          "num_leaves": [
+            31,
+            63,
+            127
+          ],
+          "reg_alpha": [
+            0,
+            0.1
+          ],
+          "reg_lambda": [
+            0.1,
+            1.0
+          ],
+          "subsample": [
+            0.7,
+            0.8,
+            0.9,
+            1.0
+          ]
+        }
+      },
+      "tabular_transformer": {
+        "n_search_iter": 8,
+        "search_space": {
+          "batch_size": [
+            256,
+            512
+          ],
+          "d_model": [
+            64,
+            128
+          ],
+          "dropout": [
+            0.05,
+            0.1
+          ],
+          "epochs": [
+            20,
+            40
+          ],
+          "lr": [
+            0.001,
+            0.0005
+          ],
+          "n_heads": [
+            4,
+            8
+          ],
+          "n_layers": [
+            2,
+            3
+          ]
+        }
+      },
+      "xgboost": {
+        "n_search_iter": 10,
+        "search_space": {
+          "colsample_bytree": [
+            0.7,
+            0.85,
+            1.0
+          ],
+          "learning_rate": [
+            0.03,
+            0.05,
+            0.1
+          ],
+          "max_depth": [
+            4,
+            6,
+            8
+          ],
+          "n_estimators": [
+            600,
+            1000,
+            1400
+          ],
+          "reg_alpha": [
+            0.0,
+            0.1,
+            0.5
+          ],
+          "reg_lambda": [
+            0.5,
+            1.0,
+            2.0
+          ],
+          "subsample": [
+            0.7,
+            0.85,
+            1.0
+          ]
+        }
+      }
+    },
+    "nested_cv": {
+      "hdd_bin_labels": [
+        "very_mild",
+        "mild",
+        "moderate",
+        "cold",
+        "very_cold"
+      ],
+      "hdd_bins": [
+        0,
+        2000,
+        4000,
+        6000,
+        8000,
+        100000
+      ],
+      "inner_folds": 3,
+      "outer_folds": 5,
+      "random_state": 42,
+      "stratify_by": [
+        "DIVISION",
+        "tech_group",
+        "HDD_bin"
+      ]
+    },
+    "output": {
+      "figure_dpi": 300,
+      "figure_format": "png",
+      "figures_dir": "outputs/figures/",
+      "models_dir": "outputs/models/",
+      "tables_dir": "outputs/tables/"
+    },
+    "runtime": {
+      "gpu_id": 0,
+      "lgbm_gpu_platform_id": 0,
+      "use_cuda": false
+    },
+    "sensitivity": {
+      "analyses": [
+        {
+          "description": "Compare E vs E/Area targets",
+          "name": "target_comparison",
+          "variations": [
+            {
+              "target": "TOTALBTUSPH"
+            },
+            {
+              "target": "E_heat_per_area"
+            }
+          ]
+        },
+        {
+          "description": "Exclude HDD < 1000",
+          "name": "climate_restriction",
+          "variations": [
+            {
+              "hdd_min": 0
+            },
+            {
+              "hdd_min": 1000
+            }
+          ]
+        },
+        {
+          "description": "Direct vs proxy vs none",
+          "name": "covid_controls",
+          "variations": [
+            {
+              "covid": "direct"
+            },
+            {
+              "covid": "proxy"
+            },
+            {
+              "covid": "none"
+            }
+          ]
+        },
+        {
+          "description": "Technology grouping rules",
+          "name": "tech_assignment",
+          "variations": [
+            {
+              "rule": "primary_only"
+            },
+            {
+              "rule": "with_hybrid"
+            },
+            {
+              "rule": "exclude_hybrid"
+            }
+          ]
+        },
+        {
+          "description": "With vs without constraints",
+          "name": "monotonic_constraints",
+          "variations": [
+            {
+              "constraints": true
+            },
+            {
+              "constraints": false
+            }
+          ]
+        }
+      ]
+    },
+    "technology_groups": {
+      "combustion": {
+        "description": "Combustion-based heating systems",
+        "equipm_codes": [
+          2,
+          3,
+          7,
+          8
+        ],
+        "fuelheat_codes": [
+          1,
+          2,
+          3,
+          7
+        ]
+      },
+      "electric_heat_pump": {
+        "description": "Electric heat pump systems",
+        "equipm_codes": [
+          4
+        ],
+        "fuelheat_codes": [
+          5
+        ]
+      },
+      "electric_resistance": {
+        "description": "Electric resistance heating",
+        "equipm_codes": [
+          5,
+          10
+        ],
+        "fuelheat_codes": [
+          5
+        ]
+      },
+      "excluded": {
+        "description": "No heating system",
+        "equipm_codes": [
+          -2
+        ]
+      },
+      "hybrid_ambiguous": {
+        "description": "Hybrid or ambiguous systems",
+        "equipm_codes": [
+          13,
+          99
+        ]
+      }
+    },
+    "uncertainty": {
+      "jackknife": {
+        "confidence_level": 0.95,
+        "n_replicates": 60
+      },
+      "refit_sensitivity": {
+        "n_refit_replicates": 10,
+        "refit_indices": [
+          1,
+          7,
+          13,
+          19,
+          25,
+          31,
+          37,
+          43,
+          49,
+          55
+        ]
+      }
+    },
+    "group_calibration": {
+      "enabled": true,
+      "grouping_strategy": "climate",
+      "min_group_size": 200,
+      "combine_groups": true,
+      "additional_strategies": [
+        "tenure",
+        "tech_climate"
+      ]
+    },
+    "run_manifest": {
+      "enabled": true,
+      "include_dataset_fingerprint": true,
+      "include_hardware_info": true,
+      "include_package_versions": true
+    }
+  }
+}
