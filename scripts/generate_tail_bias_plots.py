@@ -240,8 +240,8 @@ def plot_delta_ci(df, output_path):
     
     ax.set_yticks(y_pos)
     ax.set_yticklabels(metrics, fontsize=11)
-    ax.set_xlabel('Delta (Monolithic - Split)', fontsize=12)
-    ax.set_title('Model Comparison: Delta with 95% CI\n(Baseline Tweedie vs Quantile q=0.90)', 
+    ax.set_xlabel('Δ = Baseline (Tweedie) - Quantile (q=0.90)', fontsize=12)
+    ax.set_title('Baseline Tweedie vs Quantile q=0.90: Delta with 95% CI\n(Negative Δ = Baseline is better on that metric)', 
                  fontsize=13, fontweight='bold')
     
     # Add value annotations
